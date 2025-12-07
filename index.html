@@ -3,87 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Studio | Free QR Code Generator</title>
+    <title>QR Studio | Professional QR Code Generator</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Include QR Code library directly -->
-    <script>
-        // Simple QR Code Generator Library (no external dependency)
-        window.QRCode = {
-            toCanvas: function(canvas, text, options, callback) {
-                try {
-                    // Create QR Code using canvas
-                    const ctx = canvas.getContext('2d');
-                    const size = options.width || 200;
-                    const margin = options.margin || 4;
-                    const dark = options.color?.dark || '#000000';
-                    const light = options.color?.light || '#ffffff';
-                    
-                    canvas.width = size;
-                    canvas.height = size;
-                    
-                    // Fill background
-                    ctx.fillStyle = light;
-                    ctx.fillRect(0, 0, size, size);
-                    
-                    // Create a simple QR pattern (for demonstration)
-                    // In a real app, you'd use a proper QR algorithm
-                    const qrSize = size - (margin * 2);
-                    
-                    // Draw a simple pattern
-                    ctx.fillStyle = dark;
-                    
-                    // Draw border squares
-                    ctx.fillRect(margin, margin, 40, 40);
-                    ctx.fillRect(size - margin - 40, margin, 40, 40);
-                    ctx.fillRect(margin, size - margin - 40, 40, 40);
-                    
-                    // Draw center pattern
-                    const centerX = size / 2 - 20;
-                    const centerY = size / 2 - 20;
-                    ctx.fillRect(centerX, centerY, 40, 40);
-                    
-                    // Draw text
-                    ctx.fillStyle = dark;
-                    ctx.font = '14px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.fillText('QR Code', size / 2, size / 2 - 30);
-                    ctx.fillText(text.substring(0, 20), size / 2, size / 2 + 30);
-                    
-                    if (callback) callback(null);
-                    
-                } catch (error) {
-                    if (callback) callback(error);
-                }
-            },
-            
-            toString: function(text, options, callback) {
-                try {
-                    const size = options.width || 200;
-                    const dark = options.color?.dark || '#000000';
-                    const light = options.color?.light || '#ffffff';
-                    
-                    // Create simple SVG
-                    const svg = `<svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
-                        <rect width="100%" height="100%" fill="${light}"/>
-                        <rect x="20" y="20" width="40" height="40" fill="${dark}"/>
-                        <rect x="${size-60}" y="20" width="40" height="40" fill="${dark}"/>
-                        <rect x="20" y="${size-60}" width="40" height="40" fill="${dark}"/>
-                        <rect x="${size/2-20}" y="${size/2-20}" width="40" height="40" fill="${dark}"/>
-                        <text x="50%" y="50%" text-anchor="middle" fill="${dark}" font-family="Arial" font-size="14">
-                            QR Code
-                        </text>
-                    </svg>`;
-                    
-                    if (callback) callback(null, svg);
-                    
-                } catch (error) {
-                    if (callback) callback(error);
-                }
-            }
-        };
-    </script>
+    <!-- QR Code Library -->
+    <script src="https://cdn.jsdelivr.net/npm/davidshimjs-qrcodejs@0.0.2/qrcode.min.js"></script>
 </head>
 <body>
     <!-- Theme Toggle -->
@@ -98,7 +23,7 @@
         <!-- Header -->
         <header class="header">
             <h1><i class="fas fa-qrcode"></i> QR Studio</h1>
-            <p>Generate QR codes instantly - Free & No Signup</p>
+            <p>Generate professional QR codes instantly</p>
         </header>
 
         <!-- Main Content -->
@@ -106,12 +31,12 @@
             <!-- Controls Section -->
             <div class="controls">
                 <div class="card">
-                    <h2><i class="fas fa-link"></i> Enter URL</h2>
+                    <h2><i class="fas fa-link"></i> Enter URL or Text</h2>
                     <div class="input-group">
                         <input type="text" 
                                id="urlInput" 
-                               placeholder="https://example.com"
-                               value="https://google.com">
+                               placeholder="https://example.com or any text"
+                               value="https://github.com">
                         <button class="btn validate-btn" id="validateBtn">
                             <i class="fas fa-check"></i>
                         </button>
@@ -121,42 +46,91 @@
                         <i class="fas fa-bolt"></i> Generate QR Code
                         <span class="loading" id="loading">⌛</span>
                     </button>
+                    
+                    <!-- Quick Actions -->
+                    <div class="quick-actions">
+                        <button class="quick-btn" data-text="https://github.com">
+                            <i class="fab fa-github"></i> GitHub
+                        </button>
+                        <button class="quick-btn" data-text="https://youtube.com">
+                            <i class="fab fa-youtube"></i> YouTube
+                        </button>
+                        <button class="quick-btn" data-text="https://linkedin.com">
+                            <i class="fab fa-linkedin"></i> LinkedIn
+                        </button>
+                        <button class="quick-btn" data-text="WIFI:T:WPA;S:MyWifi;P:password123;;">
+                            <i class="fas fa-wifi"></i> WiFi
+                        </button>
+                    </div>
                 </div>
 
                 <div class="card">
-                    <h2><i class="fas fa-palette"></i> Customize</h2>
+                    <h2><i class="fas fa-palette"></i> Customization</h2>
                     
                     <div class="color-options">
                         <div class="color-option">
-                            <label>QR Color</label>
+                            <label><i class="fas fa-paint-brush"></i> QR Color</label>
                             <div class="color-input">
-                                <input type="color" id="qrColor" value="#3b82f6">
-                                <input type="text" id="qrColorText" value="#3b82f6" class="color-text">
+                                <input type="color" id="qrColor" value="#000000">
+                                <span class="color-display" id="qrColorDisplay">#000000</span>
                             </div>
                         </div>
                         
                         <div class="color-option">
-                            <label>Background</label>
+                            <label><i class="fas fa-fill"></i> Background</label>
                             <div class="color-input">
                                 <input type="color" id="bgColor" value="#ffffff">
-                                <input type="text" id="bgColorText" value="#ffffff" class="color-text">
+                                <span class="color-display" id="bgColorDisplay">#ffffff</span>
                             </div>
                         </div>
                     </div>
 
-                    <div class="slider-group">
-                        <label>Size: <span id="sizeValue">300</span>px</label>
-                        <input type="range" id="qrSize" min="150" max="500" value="300" class="slider">
+                    <!-- QR Type Selection -->
+                    <div class="qr-type-options">
+                        <label><i class="fas fa-cog"></i> QR Type</label>
+                        <div class="type-buttons">
+                            <button class="type-btn active" data-type="url">
+                                <i class="fas fa-link"></i> URL
+                            </button>
+                            <button class="type-btn" data-type="text">
+                                <i class="fas fa-font"></i> Text
+                            </button>
+                            <button class="type-btn" data-type="wifi">
+                                <i class="fas fa-wifi"></i> WiFi
+                            </button>
+                            <button class="type-btn" data-type="contact">
+                                <i class="fas fa-user"></i> Contact
+                            </button>
+                        </div>
                     </div>
 
-                    <div class="slider-group">
-                        <label>Margin: <span id="marginValue">20</span>px</label>
-                        <input type="range" id="qrMargin" min="0" max="40" value="20" class="slider">
+                    <!-- Error Correction Level -->
+                    <div class="error-correction">
+                        <label><i class="fas fa-shield-alt"></i> Error Correction</label>
+                        <div class="correction-buttons">
+                            <button class="correction-btn active" data-level="L">
+                                Low (7%)
+                            </button>
+                            <button class="correction-btn" data-level="M">
+                                Medium (15%)
+                            </button>
+                            <button class="correction-btn" data-level="Q">
+                                High (25%)
+                            </button>
+                            <button class="correction-btn" data-level="H">
+                                Best (30%)
+                            </button>
+                        </div>
                     </div>
 
-                    <button class="btn shorten-btn" id="shortenBtn">
-                        <i class="fas fa-compress-alt"></i> Shorten URL
-                    </button>
+                    <div class="action-buttons">
+                        <button class="btn secondary-btn" id="shortenBtn">
+                            <i class="fas fa-compress-alt"></i> Shorten URL
+                        </button>
+                        <button class="btn secondary-btn" id="resetBtn">
+                            <i class="fas fa-redo"></i> Reset
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -166,35 +140,65 @@
                     <h2><i class="fas fa-eye"></i> Live Preview</h2>
                     
                     <div class="qr-container">
-                        <div id="qrcode">
+                        <div id="qrcode" class="qr-code-display">
                             <div class="placeholder">
                                 <i class="fas fa-qrcode"></i>
                                 <p>QR Code Preview</p>
-                                <small>Enter URL and click Generate</small>
+                                <small>Enter content and click Generate</small>
                             </div>
                         </div>
                     </div>
 
+                    <!-- Scan Test Indicator -->
+                    <div class="scan-test">
+                        <div class="test-indicator">
+                            <i class="fas fa-check-circle"></i>
+                            <span>QR Code is scannable</span>
+                        </div>
+                        <div class="test-actions">
+                            <button class="test-btn" id="testScanBtn">
+                                <i class="fas fa-mobile-alt"></i> Test Scan
+                            </button>
+                        </div>
+                    </div>
+
                     <div class="preview-info">
-                        <div class="url-display">
-                            <span id="previewUrl">https://google.com</span>
+                        <div class="info-item">
+                            <i class="fas fa-link"></i>
+                            <span class="info-text" id="previewUrl">https://github.com</span>
                         </div>
-                        <div class="size-display">
-                            <span id="previewSize">300×300px</span>
+                        <div class="info-item">
+                            <i class="fas fa-expand-alt"></i>
+                            <span class="info-text">Fixed Size: 400×400px</span>
                         </div>
                     </div>
 
-                    <div class="download-buttons">
-                        <button class="btn download-btn" id="downloadPNG" disabled>
-                            <i class="fas fa-download"></i> Download PNG
-                        </button>
-                        <button class="btn download-btn" id="downloadSVG" disabled>
-                            <i class="fas fa-download"></i> Download SVG
-                        </button>
-                    </div>
-
-                    <div class="tips">
-                        <p><i class="fas fa-lightbulb"></i> <strong>Tip:</strong> Use contrasting colors for better scanning.</p>
+                    <!-- Download Options -->
+                    <div class="download-section">
+                        <h3><i class="fas fa-download"></i> Download Options</h3>
+                        <div class="download-buttons">
+                            <button class="btn download-btn" id="downloadPNG" disabled>
+                                <i class="fas fa-file-image"></i> PNG
+                            </button>
+                            <button class="btn download-btn" id="downloadSVG" disabled>
+                                <i class="fas fa-file-code"></i> SVG
+                            </button>
+                            <button class="btn download-btn" id="downloadJPG" disabled>
+                                <i class="fas fa-file-image"></i> JPG
+                            </button>
+                        </div>
+                        
+                        <!-- Additional Options -->
+                        <div class="download-options">
+                            <label class="option-checkbox">
+                                <input type="checkbox" id="transparentBg" checked>
+                                <span>Transparent Background</span>
+                            </label>
+                            <label class="option-checkbox">
+                                <input type="checkbox" id="addBorder">
+                                <span>Add White Border</span>
+                            </label>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -205,19 +209,49 @@
             <h3><i class="fas fa-link"></i> Short URL Generated</h3>
             <div class="short-url-box">
                 <span id="shortUrlText"></span>
-                <button class="btn copy-btn" id="copyShortBtn">
-                    <i class="fas fa-copy"></i>
-                </button>
+                <div class="short-url-actions">
+                    <button class="btn icon-btn" id="copyShortBtn" title="Copy">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                    <button class="btn icon-btn" id="testShortBtn" title="Test">
+                        <i class="fas fa-external-link-alt"></i>
+                    </button>
+                </div>
             </div>
             <button class="btn use-btn" id="useShortUrlBtn">
                 <i class="fas fa-check-circle"></i> Use This URL
             </button>
         </div>
 
+        <!-- QR Statistics -->
+        <div class="stats-section">
+            <div class="stat-card">
+                <i class="fas fa-qrcode"></i>
+                <div class="stat-content">
+                    <div class="stat-value" id="totalGenerated">0</div>
+                    <div class="stat-label">Codes Generated</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-clock"></i>
+                <div class="stat-content">
+                    <div class="stat-value" id="lastGenerated">--:--</div>
+                    <div class="stat-label">Last Generated</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-download"></i>
+                <div class="stat-content">
+                    <div class="stat-value" id="totalDownloads">0</div>
+                    <div class="stat-label">Downloads</div>
+                </div>
+            </div>
+        </div>
+
         <!-- Footer -->
         <footer>
-            <p>&copy; <span id="currentYear"></span> QR Studio - Free QR Code Generator</p>
-            <p>No registration required • Unlimited use</p>
+            <p>&copy; <span id="currentYear"></span> QR Studio | Professional QR Code Generator</p>
+            <p class="footer-note">All QR codes are scannable and compatible with all devices</p>
         </footer>
     </div>
 
