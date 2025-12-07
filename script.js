@@ -1,159 +1,215 @@
-// ============================================
-// APP INITIALIZATION
-// ============================================
+// ============================
+// INITIALIZATION
+// ============================
 
 document.addEventListener('DOMContentLoaded', function() {
-    initApp();
-});
-
-function initApp() {
+    console.log('QR Studio Initializing...');
+    
     // Set current year
     document.getElementById('currentYear').textContent = new Date().getFullYear();
     
-    // Initialize
-    initializeElements();
-    initializeEventListeners();
+    // Initialize theme
+    initTheme();
+    
+    // Initialize all elements
+    initElements();
+    
+    // Setup event listeners
+    setupEventListeners();
     
     // Generate initial QR code
-    setTimeout(generateQRCode, 500);
+    setTimeout(() => {
+        generateQRCode();
+    }, 500);
     
-    // Welcome message
-    showToast('QR Code Generator Ready!', 'info');
-}
+    console.log('QR Studio Ready!');
+});
 
-// ============================================
-// STATE MANAGEMENT
-// ============================================
+// ============================
+// STATE
+// ============================
 
-const appState = {
-    currentQRCode: null,
+const state = {
+    qrCode: null,
     shortUrl: '',
-    canvas: null,
-    totalGenerated: 0,
-    isGenerating: false
+    isLoading: false,
+    generatedCount: 0,
+    qrCodeLibLoaded: false
 };
 
-// ============================================
-// DOM ELEMENTS
-// ============================================
+// ============================
+// ELEMENTS
+// ============================
 
 let elements = {};
 
-function initializeElements() {
-    // Core elements only
+function initElements() {
     elements = {
-        // Input elements
-        urlInput: document.getElementById('urlInput'),
-        generateBtn: document.getElementById('generateBtn'),
-        shortenBtn: document.getElementById('shortenBtn'),
-        shortUrlText: document.getElementById('shortUrlText'),
-        useShortUrlBtn: document.getElementById('useShortUrlBtn'),
-        shortResult: document.getElementById('shortResult'),
+        // Theme
+        themeToggle: document.getElementById('themeToggle'),
         
-        // Design elements
+        // Input
+        urlInput: document.getElementById('urlInput'),
+        
+        // Colors
         qrColor: document.getElementById('qrColor'),
         bgColor: document.getElementById('bgColor'),
         qrColorText: document.getElementById('qrColorText'),
         bgColorText: document.getElementById('bgColorText'),
+        
+        // Sliders
         qrSize: document.getElementById('qrSize'),
         qrMargin: document.getElementById('qrMargin'),
         sizeValue: document.getElementById('sizeValue'),
         marginValue: document.getElementById('marginValue'),
-        errorCorrection: document.getElementById('errorCorrection'),
         
-        // Preview elements
-        qrContainer: document.getElementById('qrContainer'),
-        qrPlaceholder: document.getElementById('qrPlaceholder'),
-        qrCanvas: document.getElementById('qrCanvas'),
+        // Buttons
+        generateBtn: document.getElementById('generateBtn'),
+        shortenBtn: document.getElementById('shortenBtn'),
+        validateBtn: document.getElementById('validateBtn'),
+        downloadPNG: document.getElementById('downloadPNG'),
+        downloadSVG: document.getElementById('downloadSVG'),
+        copyShortBtn: document.getElementById('copyShortBtn'),
+        useShortUrlBtn: document.getElementById('useShortUrlBtn'),
+        
+        // Loading
+        loading: document.getElementById('loading'),
+        
+        // Preview
+        qrcodeDiv: document.getElementById('qrcode'),
         previewUrl: document.getElementById('previewUrl'),
         previewSize: document.getElementById('previewSize'),
         
-        // Download elements
-        downloadPNG: document.getElementById('downloadPNG'),
-        downloadSVG: document.getElementById('downloadSVG'),
-        
-        // Stats elements
-        totalGenerated: document.getElementById('totalGenerated'),
-        
-        // UI elements
-        themeToggle: document.getElementById('themeToggle'),
-        resetAllBtn: document.getElementById('resetAllBtn'),
-        btnLoading: document.getElementById('btnLoading'),
-        refreshPreview: document.getElementById('refreshPreview'),
-        copyShortBtn: document.getElementById('copyShortBtn')
+        // Short URL
+        shortUrlText: document.getElementById('shortUrlText'),
+        shortResult: document.getElementById('shortResult')
     };
     
-    // Initialize values
-    elements.sizeValue.textContent = elements.qrSize.value;
-    elements.marginValue.textContent = elements.qrMargin.value;
+    // Set initial values
+    updateSliderValues();
 }
 
-// ============================================
-// EVENT LISTENERS
-// ============================================
+// ============================
+// THEME FUNCTIONALITY
+// ============================
 
-function initializeEventListeners() {
-    // Color pickers
-    elements.qrColor.addEventListener('input', updateColorText);
-    elements.bgColor.addEventListener('input', updateColorText);
-    elements.qrColorText.addEventListener('input', updateColorPicker);
-    elements.bgColorText.addEventListener('input', updateColorPicker);
+function initTheme() {
+    const savedTheme = localStorage.getItem('qrStudioTheme') || 'dark';
+    if (savedTheme === 'light') {
+        document.body.classList.add('light-mode');
+    }
+}
+
+function toggleTheme() {
+    const body = document.body;
+    const isLight = body.classList.toggle('light-mode');
     
-    // Sliders
-    elements.qrSize.addEventListener('input', updateSizeValue);
-    elements.qrMargin.addEventListener('input', updateMarginValue);
+    // Save preference
+    localStorage.setItem('qrStudioTheme', isLight ? 'light' : 'dark');
     
-    // Main buttons
+    // Show notification
+    showNotification(`Switched to ${isLight ? 'Light' : 'Dark'} mode`);
+}
+
+// ============================
+// EVENT LISTENERS
+// ============================
+
+function setupEventListeners() {
+    console.log('Setting up event listeners...');
+    
+    // Theme toggle
+    elements.themeToggle.addEventListener('click', toggleTheme);
+    
+    // Generate button
     elements.generateBtn.addEventListener('click', generateQRCode);
+    
+    // Shorten button
     elements.shortenBtn.addEventListener('click', shortenURL);
-    elements.useShortUrlBtn.addEventListener('click', useShortenedURL);
-    elements.copyShortBtn.addEventListener('click', copyShortURL);
+    
+    // Validate button
+    elements.validateBtn.addEventListener('click', validateURL);
     
     // Download buttons
     elements.downloadPNG.addEventListener('click', () => downloadQRCode('png'));
     elements.downloadSVG.addEventListener('click', () => downloadQRCode('svg'));
     
-    // UI buttons
-    elements.resetAllBtn.addEventListener('click', resetAllSettings);
-    elements.themeToggle.addEventListener('click', toggleTheme);
-    elements.refreshPreview.addEventListener('click', () => {
-        if (elements.urlInput.value.trim()) {
-            generateQRCode();
-            showToast('Preview refreshed', 'info');
+    // Short URL actions
+    elements.copyShortBtn.addEventListener('click', copyShortURL);
+    elements.useShortUrlBtn.addEventListener('click', useShortenedURL);
+    
+    // Color pickers
+    elements.qrColor.addEventListener('input', () => {
+        elements.qrColorText.value = elements.qrColor.value;
+        if (elements.urlInput.value.trim()) generateQRCode();
+    });
+    
+    elements.bgColor.addEventListener('input', () => {
+        elements.bgColorText.value = elements.bgColor.value;
+        if (elements.urlInput.value.trim()) generateQRCode();
+    });
+    
+    // Color text inputs
+    elements.qrColorText.addEventListener('change', () => {
+        const color = validateColor(elements.qrColorText.value);
+        if (color) {
+            elements.qrColor.value = color;
+            elements.qrColorText.value = color;
+            if (elements.urlInput.value.trim()) generateQRCode();
         }
     });
     
-    // URL input - Enter key to generate
+    elements.bgColorText.addEventListener('change', () => {
+        const color = validateColor(elements.bgColorText.value);
+        if (color) {
+            elements.bgColor.value = color;
+            elements.bgColorText.value = color;
+            if (elements.urlInput.value.trim()) generateQRCode();
+        }
+    });
+    
+    // Sliders
+    elements.qrSize.addEventListener('input', () => {
+        elements.sizeValue.textContent = elements.qrSize.value;
+        elements.previewSize.textContent = `${elements.qrSize.value}×${elements.qrSize.value}px`;
+        if (elements.urlInput.value.trim()) generateQRCode();
+    });
+    
+    elements.qrMargin.addEventListener('input', () => {
+        elements.marginValue.textContent = elements.qrMargin.value;
+        if (elements.urlInput.value.trim()) generateQRCode();
+    });
+    
+    // Enter key to generate
     elements.urlInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') generateQRCode();
     });
-    
-    // Auto-generate on design changes
-    const designElements = [elements.qrColor, elements.bgColor, elements.errorCorrection, elements.qrSize, elements.qrMargin];
-    designElements.forEach(el => {
-        el.addEventListener('change', () => {
-            if (elements.urlInput.value.trim()) {
-                generateQRCode();
-            }
-        });
-    });
 }
 
-// ============================================
-// CORE FUNCTIONS
-// ============================================
+function updateSliderValues() {
+    elements.sizeValue.textContent = elements.qrSize.value;
+    elements.marginValue.textContent = elements.qrMargin.value;
+    elements.previewSize.textContent = `${elements.qrSize.value}×${elements.qrSize.value}px`;
+}
 
-async function generateQRCode() {
+// ============================
+// QR CODE GENERATION - FIXED
+// ============================
+
+function generateQRCode() {
+    console.log('Generating QR Code...');
+    
     const url = elements.urlInput.value.trim();
     
+    // Validate URL
     if (!url) {
-        showToast('Please enter a URL', 'error');
+        showNotification('Please enter a URL', 'error');
         return;
     }
     
-    // Process URL
+    // Process URL - ensure it has http/https
     let processedUrl = url;
-    if (!url.startsWith('http')) {
+    if (!/^https?:\/\//i.test(url)) {
         processedUrl = 'https://' + url;
         elements.urlInput.value = processedUrl;
     }
@@ -163,80 +219,118 @@ async function generateQRCode() {
         setLoading(true);
         
         // Clear previous QR code
-        elements.qrCanvas.innerHTML = '';
-        elements.qrCanvas.classList.remove('visible');
-        elements.qrPlaceholder.style.display = 'flex';
+        elements.qrcodeDiv.innerHTML = '';
+        
+        // Show loading in preview
+        elements.qrcodeDiv.innerHTML = `
+            <div class="placeholder">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Generating QR Code...</p>
+            </div>
+        `;
+        
+        // Update preview info
+        elements.previewUrl.textContent = processedUrl;
         
         // Get settings
         const size = parseInt(elements.qrSize.value);
         const margin = parseInt(elements.qrMargin.value);
-        const errorCorrectionLevel = elements.errorCorrection.value;
         
-        // Update preview
-        elements.previewUrl.textContent = processedUrl;
-        elements.previewSize.textContent = `${size}×${size}px`;
-        document.getElementById('errorLevel').textContent = errorCorrectionLevel === 'H' ? 'High' : 
-                                                           errorCorrectionLevel === 'Q' ? 'Quartile' :
-                                                           errorCorrectionLevel === 'M' ? 'Medium' : 'Low';
+        console.log('QR Code Settings:', { 
+            size, 
+            margin, 
+            url: processedUrl,
+            dark: elements.qrColor.value,
+            light: elements.bgColor.value
+        });
         
-        // Create canvas
+        // Check if QRCode library is loaded
+        if (typeof QRCode === 'undefined') {
+            throw new Error('QR Code library not loaded. Please check your internet connection.');
+        }
+        
+        // Create canvas element
         const canvas = document.createElement('canvas');
-        elements.qrCanvas.appendChild(canvas);
+        canvas.id = 'qrCanvas';
         
-        // Generate QR code
-        await QRCode.toCanvas(canvas, processedUrl, {
+        // Generate QR code using QRCode library
+        QRCode.toCanvas(canvas, processedUrl, {
             width: size,
             margin: margin,
             color: {
                 dark: elements.qrColor.value,
                 light: elements.bgColor.value
-            },
-            errorCorrectionLevel: errorCorrectionLevel
+            }
+        }, function (error) {
+            if (error) {
+                console.error('QRCode.toCanvas error:', error);
+                showNotification('Failed to generate QR code. Please try a different URL.', 'error');
+                
+                // Show error in preview
+                elements.qrcodeDiv.innerHTML = `
+                    <div class="placeholder">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p>Error generating QR code</p>
+                        <small>${error.message || 'Please check your URL'}</small>
+                    </div>
+                `;
+                setLoading(false);
+                return;
+            }
+            
+            // Success - Add canvas to preview
+            elements.qrcodeDiv.innerHTML = '';
+            elements.qrcodeDiv.appendChild(canvas);
+            
+            // Store reference
+            state.qrCode = {
+                url: processedUrl,
+                canvas: canvas,
+                size: size,
+                margin: margin
+            };
+            
+            // Enable download buttons
+            elements.downloadPNG.disabled = false;
+            elements.downloadSVG.disabled = false;
+            
+            // Update count
+            state.generatedCount++;
+            
+            // Show success
+            showNotification('QR Code generated successfully!', 'success');
+            
+            // Reset loading state
+            setLoading(false);
         });
         
-        // Store reference
-        appState.currentQRCode = {
-            url: processedUrl,
-            canvas: canvas,
-            size: size,
-            margin: margin
-        };
-        
-        // Update UI
-        elements.qrPlaceholder.style.display = 'none';
-        elements.qrCanvas.classList.add('visible');
-        
-        // Enable download buttons
-        elements.downloadPNG.disabled = false;
-        elements.downloadSVG.disabled = false;
-        
-        // Update stats
-        appState.totalGenerated++;
-        elements.totalGenerated.textContent = appState.totalGenerated;
-        
-        // Show success
-        showToast('QR Code generated!', 'success');
-        
     } catch (error) {
-        console.error('Error:', error);
-        showToast('Failed to generate QR code', 'error');
+        console.error('General error generating QR code:', error);
+        showNotification('Failed to generate QR code. Please check your URL and try again.', 'error');
         
-        // Show error
-        elements.qrPlaceholder.innerHTML = `
-            <i class="fas fa-exclamation-triangle"></i>
-            <p>Generation failed</p>
-            <small>Check URL and try again</small>
+        // Show error in preview
+        elements.qrcodeDiv.innerHTML = `
+            <div class="placeholder">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>Generation Error</p>
+                <small>${error.message || 'Please check your URL'}</small>
+            </div>
         `;
-    } finally {
         setLoading(false);
     }
 }
 
+// ============================
+// URL SHORTENING
+// ============================
+
 async function shortenURL() {
+    console.log('Shortening URL...');
+    
     const url = elements.urlInput.value.trim();
     
     if (!url) {
-        showToast('Please enter a URL', 'error');
+        showNotification('Please enter a URL first', 'error');
         return;
     }
     
@@ -247,282 +341,253 @@ async function shortenURL() {
     }
     
     try {
+        // Set loading state
         elements.shortenBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Shortening...';
         elements.shortenBtn.disabled = true;
         
-        // Try is.gd service
-        const response = await fetch(`https://is.gd/create.php?format=simple&url=${encodeURIComponent(processedUrl)}`);
+        // Shorten URL using reliable service
+        const response = await fetch(`https://api.shrtco.de/v2/shorten?url=${encodeURIComponent(processedUrl)}`);
         
         if (response.ok) {
-            const shortened = await response.text();
-            if (shortened && !shortened.includes('Error')) {
-                appState.shortUrl = shortened;
-                elements.shortUrlText.textContent = shortened;
-                elements.shortResult.classList.add('visible');
-                showToast('URL shortened!', 'success');
+            const data = await response.json();
+            if (data.ok) {
+                state.shortUrl = data.result.full_short_link;
+                elements.shortUrlText.textContent = state.shortUrl;
+                elements.shortResult.classList.add('show');
+                showNotification('URL shortened successfully!', 'success');
             } else {
-                throw new Error('Service error');
+                throw new Error(data.error || 'Shortening failed');
             }
         } else {
             throw new Error('Network error');
         }
         
     } catch (error) {
-        console.error('Shortening error:', error);
-        showToast('Could not shorten URL', 'error');
+        console.error('URL shortening error:', error);
+        showNotification('Could not shorten URL. Please try again.', 'error');
     } finally {
-        elements.shortenBtn.innerHTML = '<i class="fas fa-magic"></i> Shorten This URL';
+        // Reset button
+        elements.shortenBtn.innerHTML = '<i class="fas fa-compress-alt"></i> Shorten URL';
         elements.shortenBtn.disabled = false;
     }
 }
 
-function useShortenedURL() {
-    if (appState.shortUrl) {
-        elements.urlInput.value = appState.shortUrl;
-        generateQRCode();
-        showToast('Using shortened URL', 'info');
-    } else {
-        showToast('No shortened URL available', 'error');
-    }
-}
-
 function copyShortURL() {
-    if (appState.shortUrl) {
-        navigator.clipboard.writeText(appState.shortUrl)
-            .then(() => showToast('Copied to clipboard!', 'success'))
+    if (state.shortUrl) {
+        navigator.clipboard.writeText(state.shortUrl)
+            .then(() => {
+                showNotification('Copied to clipboard!', 'success');
+            })
             .catch(() => {
-                // Fallback
+                // Fallback for older browsers
                 const textArea = document.createElement('textarea');
-                textArea.value = appState.shortUrl;
+                textArea.value = state.shortUrl;
                 document.body.appendChild(textArea);
                 textArea.select();
                 document.execCommand('copy');
                 document.body.removeChild(textArea);
-                showToast('Copied!', 'success');
+                showNotification('Copied!', 'success');
             });
     } else {
-        showToast('No URL to copy', 'error');
+        showNotification('No URL to copy', 'error');
     }
 }
 
-async function downloadQRCode(format) {
-    if (!appState.currentQRCode || !appState.currentQRCode.canvas) {
-        showToast('Please generate a QR code first', 'error');
+function useShortenedURL() {
+    if (state.shortUrl) {
+        elements.urlInput.value = state.shortUrl;
+        generateQRCode();
+        showNotification('Using shortened URL', 'info');
+    } else {
+        showNotification('No shortened URL available', 'error');
+    }
+}
+
+// ============================
+// DOWNLOAD FUNCTIONS
+// ============================
+
+function downloadQRCode(format) {
+    if (!state.qrCode || !state.qrCode.canvas) {
+        showNotification('Please generate a QR code first', 'error');
         return;
     }
     
     try {
-        let dataUrl, filename;
-        
         if (format === 'png') {
             // PNG download
-            dataUrl = appState.currentQRCode.canvas.toDataURL('image/png');
-            filename = `qr-code-${Date.now()}.png`;
-            
             const link = document.createElement('a');
-            link.href = dataUrl;
-            link.download = filename;
+            link.href = state.qrCode.canvas.toDataURL('image/png');
+            link.download = `qr-code-${Date.now()}.png`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
             
-            showToast('PNG downloaded!', 'success');
+            showNotification('PNG downloaded successfully!', 'success');
             
         } else if (format === 'svg') {
-            // SVG download
-            const svgData = await QRCode.toString(appState.currentQRCode.url, {
+            // Generate SVG
+            QRCode.toString(state.qrCode.url, {
                 type: 'svg',
-                width: appState.currentQRCode.size,
-                margin: appState.currentQRCode.margin,
+                width: state.qrCode.size,
+                margin: state.qrCode.margin,
                 color: {
                     dark: elements.qrColor.value,
                     light: elements.bgColor.value
                 }
+            }, function (error, svg) {
+                if (error) {
+                    showNotification('Failed to generate SVG', 'error');
+                    return;
+                }
+                
+                const blob = new Blob([svg], { type: 'image/svg+xml' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `qr-code-${Date.now()}.svg`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                // Clean up
+                setTimeout(() => URL.revokeObjectURL(url), 100);
+                
+                showNotification('SVG downloaded successfully!', 'success');
             });
-            
-            const blob = new Blob([svgData], { type: 'image/svg+xml' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `qr-code-${Date.now()}.svg`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            // Clean up
-            setTimeout(() => URL.revokeObjectURL(url), 100);
-            
-            showToast('SVG downloaded!', 'success');
         }
         
     } catch (error) {
         console.error('Download error:', error);
-        showToast('Download failed', 'error');
+        showNotification('Failed to download QR code', 'error');
     }
 }
 
-// ============================================
-// UI HELPER FUNCTIONS
-// ============================================
+// ============================
+// HELPER FUNCTIONS
+// ============================
 
-function updateColorText() {
-    elements.qrColorText.value = elements.qrColor.value;
-    elements.bgColorText.value = elements.bgColor.value;
+function setLoading(isLoading) {
+    state.isLoading = isLoading;
+    elements.generateBtn.disabled = isLoading;
+    elements.loading.style.display = isLoading ? 'inline-block' : 'none';
 }
 
-function updateColorPicker() {
-    const qrColor = validateColor(elements.qrColorText.value);
-    const bgColor = validateColor(elements.bgColorText.value);
-    
-    if (qrColor) {
-        elements.qrColor.value = qrColor;
-        elements.qrColorText.value = qrColor;
+function validateURL() {
+    const url = elements.urlInput.value.trim();
+    if (!url) {
+        showNotification('Please enter a URL', 'error');
+        return;
     }
     
-    if (bgColor) {
-        elements.bgColor.value = bgColor;
-        elements.bgColorText.value = bgColor;
-    }
-    
-    // Auto-update QR code if exists
-    if (elements.urlInput.value.trim()) {
-        generateQRCode();
+    // Simple URL validation
+    try {
+        new URL(url.startsWith('http') ? url : `https://${url}`);
+        showNotification('URL is valid!', 'success');
+        return true;
+    } catch {
+        showNotification('URL might be invalid. Please check format.', 'warning');
+        return false;
     }
 }
 
 function validateColor(color) {
+    // Check if it's a valid hex color
     const hexRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
-    if (hexRegex.test(color)) return color;
+    if (hexRegex.test(color)) {
+        return color;
+    }
     
+    // Try to convert other formats
     try {
         const ctx = document.createElement('canvas').getContext('2d');
         ctx.fillStyle = color;
-        return ctx.fillStyle;
+        return ctx.fillStyle === '#000000' && !color.includes('#') ? null : ctx.fillStyle;
     } catch {
-        return '#3b82f6';
+        return null;
     }
 }
 
-function updateSizeValue() {
-    elements.sizeValue.textContent = elements.qrSize.value;
-}
-
-function updateMarginValue() {
-    elements.marginValue.textContent = elements.qrMargin.value;
-}
-
-function setLoading(isLoading) {
-    appState.isGenerating = isLoading;
-    elements.generateBtn.disabled = isLoading;
+function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
     
-    if (isLoading) {
-        elements.btnLoading.style.display = 'flex';
-        elements.generateBtn.querySelector('.btn-content').style.opacity = '0.5';
-    } else {
-        elements.btnLoading.style.display = 'none';
-        elements.generateBtn.querySelector('.btn-content').style.opacity = '1';
-    }
-}
-
-function resetAllSettings() {
-    // Reset colors
-    elements.qrColor.value = '#3b82f6';
-    elements.bgColor.value = '#0f172a';
-    elements.qrColorText.value = '#3b82f6';
-    elements.bgColorText.value = '#0f172a';
+    // Get icon based on type
+    let icon = 'info-circle';
+    if (type === 'success') icon = 'check-circle';
+    if (type === 'error') icon = 'exclamation-circle';
+    if (type === 'warning') icon = 'exclamation-triangle';
     
-    // Reset size
-    elements.qrSize.value = '300';
-    elements.qrMargin.value = '20';
-    
-    // Reset error correction
-    elements.errorCorrection.value = 'H';
-    
-    // Update displays
-    updateColorText();
-    updateSizeValue();
-    updateMarginValue();
-    
-    // Hide short URL result
-    elements.shortResult.classList.remove('visible');
-    
-    // Regenerate if URL exists
-    if (elements.urlInput.value.trim()) {
-        generateQRCode();
-    }
-    
-    showToast('All settings reset', 'info');
-}
-
-function toggleTheme() {
-    const body = document.body;
-    const currentTheme = body.getAttribute('data-theme') || 'dark';
-    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-    
-    body.setAttribute('data-theme', newTheme);
-    
-    // Update toggle button
-    const icons = elements.themeToggle.querySelectorAll('i');
-    icons[0].style.opacity = newTheme === 'dark' ? '1' : '0';
-    icons[1].style.opacity = newTheme === 'light' ? '1' : '0';
-    
-    // Save preference
-    localStorage.setItem('qrStudioTheme', newTheme);
-}
-
-// ============================================
-// TOAST NOTIFICATIONS
-// ============================================
-
-function showToast(message, type = 'info') {
-    let container = document.getElementById('toastContainer');
-    if (!container) {
-        container = document.createElement('div');
-        container.id = 'toastContainer';
-        container.className = 'toast-container';
-        document.body.appendChild(container);
-    }
-    
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    
-    // Icons for different types
-    let icon = 'fa-info-circle';
-    if (type === 'success') icon = 'fa-check-circle';
-    if (type === 'error') icon = 'fa-exclamation-circle';
-    if (type === 'warning') icon = 'fa-exclamation-triangle';
-    
-    toast.innerHTML = `
-        <i class="fas ${icon}"></i>
+    notification.innerHTML = `
+        <i class="fas fa-${icon}"></i>
         <span>${message}</span>
     `;
     
-    container.appendChild(toast);
+    // Style the notification
+    notification.style.cssText = `
+        position: fixed;
+        top: 80px;
+        right: 20px;
+        padding: 15px 20px;
+        background: ${type === 'success' ? '#10b981' : 
+                     type === 'error' ? '#ef4444' : 
+                     type === 'warning' ? '#f59e0b' : '#3b82f6'};
+        color: white;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        z-index: 1000;
+        animation: slideIn 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        max-width: 400px;
+    `;
+    
+    // Add to page
+    document.body.appendChild(notification);
     
     // Remove after 3 seconds
     setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateX(100%)';
+        notification.style.opacity = '0';
+        notification.style.transform = 'translateX(100%)';
         setTimeout(() => {
-            if (toast.parentNode) {
-                toast.parentNode.removeChild(toast);
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
             }
         }, 300);
     }, 3000);
 }
 
-// ============================================
-// LOAD SAVED THEME
-// ============================================
+// Add animation for notifications
+if (!document.querySelector('#notification-styles')) {
+    const style = document.createElement('style');
+    style.id = 'notification-styles';
+    style.textContent = `
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+}
 
-document.addEventListener('DOMContentLoaded', function() {
-    const savedTheme = localStorage.getItem('qrStudioTheme') || 'dark';
-    document.body.setAttribute('data-theme', savedTheme);
-    
-    const themeToggle = document.getElementById('themeToggle');
-    if (themeToggle) {
-        const icons = themeToggle.querySelectorAll('i');
-        icons[0].style.opacity = savedTheme === 'dark' ? '1' : '0';
-        icons[1].style.opacity = savedTheme === 'light' ? '1' : '0';
+// Test QRCode library availability
+function testQRCodeLibrary() {
+    if (typeof QRCode === 'undefined') {
+        console.error('QRCode library not loaded!');
+        showNotification('QR Code library failed to load. Please refresh the page.', 'error');
+        return false;
     }
-});
+    console.log('QRCode library loaded successfully!');
+    return true;
+}
+
+// Test on load
+setTimeout(testQRCodeLibrary, 1000);
