@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Studio | Professional QR Code Generator</title>
+    <title>QR Studio |  QR Code Generator</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -22,8 +22,8 @@
     <div class="container">
         <!-- Header -->
         <header class="header">
-            <h1><i class="fas fa-qrcode"></i> QR Studio</h1>
-            <p>Generate professional QR codes instantly</p>
+            <h1><i class="fas fa-qrcode"></i> QR Tools</h1>
+            <p>Generate  QR Codes Instantly</p>
         </header>
 
         <!-- Main Content -->
@@ -31,11 +31,11 @@
             <!-- Controls Section -->
             <div class="controls">
                 <div class="card">
-                    <h2><i class="fas fa-link"></i> Enter URL or Text</h2>
+                    <h2><i class="fas fa-link"></i> Enter URL</h2>
                     <div class="input-group">
                         <input type="text" 
                                id="urlInput" 
-                               placeholder="https://example.com or any text"
+                               placeholder="https://example.com"
                                value="https://github.com">
                         <button class="btn validate-btn" id="validateBtn">
                             <i class="fas fa-check"></i>
@@ -46,22 +46,6 @@
                         <i class="fas fa-bolt"></i> Generate QR Code
                         <span class="loading" id="loading">⌛</span>
                     </button>
-                    
-                    <!-- Quick Actions -->
-                    <div class="quick-actions">
-                        <button class="quick-btn" data-text="https://github.com">
-                            <i class="fab fa-github"></i> GitHub
-                        </button>
-                        <button class="quick-btn" data-text="https://youtube.com">
-                            <i class="fab fa-youtube"></i> YouTube
-                        </button>
-                        <button class="quick-btn" data-text="https://linkedin.com">
-                            <i class="fab fa-linkedin"></i> LinkedIn
-                        </button>
-                        <button class="quick-btn" data-text="WIFI:T:WPA;S:MyWifi;P:password123;;">
-                            <i class="fas fa-wifi"></i> WiFi
-                        </button>
-                    </div>
                 </div>
 
                 <div class="card">
@@ -85,36 +69,17 @@
                         </div>
                     </div>
 
-                    <!-- QR Type Selection -->
-                    <div class="qr-type-options">
-                        <label><i class="fas fa-cog"></i> QR Type</label>
-                        <div class="type-buttons">
-                            <button class="type-btn active" data-type="url">
-                                <i class="fas fa-link"></i> URL
-                            </button>
-                            <button class="type-btn" data-type="text">
-                                <i class="fas fa-font"></i> Text
-                            </button>
-                            <button class="type-btn" data-type="wifi">
-                                <i class="fas fa-wifi"></i> WiFi
-                            </button>
-                            <button class="type-btn" data-type="contact">
-                                <i class="fas fa-user"></i> Contact
-                            </button>
-                        </div>
-                    </div>
-
                     <!-- Error Correction Level -->
                     <div class="error-correction">
                         <label><i class="fas fa-shield-alt"></i> Error Correction</label>
                         <div class="correction-buttons">
-                            <button class="correction-btn active" data-level="L">
+                            <button class="correction-btn" data-level="L">
                                 Low (7%)
                             </button>
                             <button class="correction-btn" data-level="M">
                                 Medium (15%)
                             </button>
-                            <button class="correction-btn" data-level="Q">
+                            <button class="correction-btn active" data-level="Q">
                                 High (25%)
                             </button>
                             <button class="correction-btn" data-level="H">
@@ -144,24 +109,12 @@
                             <div class="placeholder">
                                 <i class="fas fa-qrcode"></i>
                                 <p>QR Code Preview</p>
-                                <small>Enter content and click Generate</small>
+                                <small>Enter URL and click Generate</small>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Scan Test Indicator -->
-                    <div class="scan-test">
-                        <div class="test-indicator">
-                            <i class="fas fa-check-circle"></i>
-                            <span>QR Code is scannable</span>
-                        </div>
-                        <div class="test-actions">
-                            <button class="test-btn" id="testScanBtn">
-                                <i class="fas fa-mobile-alt"></i> Test Scan
-                            </button>
-                        </div>
-                    </div>
-
+                    <!-- Preview Info -->
                     <div class="preview-info">
                         <div class="info-item">
                             <i class="fas fa-link"></i>
@@ -169,7 +122,7 @@
                         </div>
                         <div class="info-item">
                             <i class="fas fa-expand-alt"></i>
-                            <span class="info-text">Fixed Size: 400×400px</span>
+                            <span class="info-text">Size: 400×400px</span>
                         </div>
                     </div>
 
@@ -183,21 +136,6 @@
                             <button class="btn download-btn" id="downloadSVG" disabled>
                                 <i class="fas fa-file-code"></i> SVG
                             </button>
-                            <button class="btn download-btn" id="downloadJPG" disabled>
-                                <i class="fas fa-file-image"></i> JPG
-                            </button>
-                        </div>
-                        
-                        <!-- Additional Options -->
-                        <div class="download-options">
-                            <label class="option-checkbox">
-                                <input type="checkbox" id="transparentBg" checked>
-                                <span>Transparent Background</span>
-                            </label>
-                            <label class="option-checkbox">
-                                <input type="checkbox" id="addBorder">
-                                <span>Add White Border</span>
-                            </label>
                         </div>
                     </div>
                 </div>
@@ -213,9 +151,6 @@
                     <button class="btn icon-btn" id="copyShortBtn" title="Copy">
                         <i class="fas fa-copy"></i>
                     </button>
-                    <button class="btn icon-btn" id="testShortBtn" title="Test">
-                        <i class="fas fa-external-link-alt"></i>
-                    </button>
                 </div>
             </div>
             <button class="btn use-btn" id="useShortUrlBtn">
@@ -223,35 +158,9 @@
             </button>
         </div>
 
-        <!-- QR Statistics -->
-        <div class="stats-section">
-            <div class="stat-card">
-                <i class="fas fa-qrcode"></i>
-                <div class="stat-content">
-                    <div class="stat-value" id="totalGenerated">0</div>
-                    <div class="stat-label">Codes Generated</div>
-                </div>
-            </div>
-            <div class="stat-card">
-                <i class="fas fa-clock"></i>
-                <div class="stat-content">
-                    <div class="stat-value" id="lastGenerated">--:--</div>
-                    <div class="stat-label">Last Generated</div>
-                </div>
-            </div>
-            <div class="stat-card">
-                <i class="fas fa-download"></i>
-                <div class="stat-content">
-                    <div class="stat-value" id="totalDownloads">0</div>
-                    <div class="stat-label">Downloads</div>
-                </div>
-            </div>
-        </div>
-
         <!-- Footer -->
         <footer>
-            <p>&copy; <span id="currentYear"></span> QR Studio | Professional QR Code Generator</p>
-            <p class="footer-note">All QR codes are scannable and compatible with all devices</p>
+            <p>&copy; <span id="currentYear"></span> QR Tools |  QR Code Generator</p>
         </footer>
     </div>
 

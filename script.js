@@ -18,7 +18,9 @@ document.addEventListener('DOMContentLoaded', function() {
     setupEventListeners();
     
     // Generate initial QR code
-    generateQRCode();
+    setTimeout(() => {
+        generateQRCode();
+    }, 100);
     
     console.log('QR Studio Ready!');
 });
@@ -31,7 +33,9 @@ const state = {
     qrCode: null,
     shortUrl: '',
     isLoading: false,
-    generatedCount: 0
+    generatedCount: 0,
+    currentErrorLevel: 'Q',
+    qrInstance: null
 };
 
 // ============================
@@ -51,18 +55,13 @@ function initElements() {
         // Colors
         qrColor: document.getElementById('qrColor'),
         bgColor: document.getElementById('bgColor'),
-        qrColorText: document.getElementById('qrColorText'),
-        bgColorText: document.getElementById('bgColorText'),
-        
-        // Sliders
-        qrSize: document.getElementById('qrSize'),
-        qrMargin: document.getElementById('qrMargin'),
-        sizeValue: document.getElementById('sizeValue'),
-        marginValue: document.getElementById('marginValue'),
+        qrColorDisplay: document.getElementById('qrColorDisplay'),
+        bgColorDisplay: document.getElementById('bgColorDisplay'),
         
         // Buttons
         generateBtn: document.getElementById('generateBtn'),
         shortenBtn: document.getElementById('shortenBtn'),
+        resetBtn: document.getElementById('resetBtn'),
         validateBtn: document.getElementById('validateBtn'),
         downloadPNG: document.getElementById('downloadPNG'),
         downloadSVG: document.getElementById('downloadSVG'),
@@ -75,15 +74,17 @@ function initElements() {
         // Preview
         qrcodeDiv: document.getElementById('qrcode'),
         previewUrl: document.getElementById('previewUrl'),
-        previewSize: document.getElementById('previewSize'),
         
         // Short URL
         shortUrlText: document.getElementById('shortUrlText'),
-        shortResult: document.getElementById('shortResult')
+        shortResult: document.getElementById('shortResult'),
+        
+        // Error correction buttons
+        correctionBtns: document.querySelectorAll('.correction-btn')
     };
     
-    // Set initial values
-    updateSliderValues();
+    // Initialize color displays
+    updateColorDisplays();
 }
 
 // ============================
@@ -105,7 +106,7 @@ function toggleTheme() {
     localStorage.setItem('qrStudioTheme', isLight ? 'light' : 'dark');
     
     // Show notification
-    showNotification(`Switched to ${isLight ? 'Light' : 'Dark'} mode`);
+    showNotification(`Switched to ${isLight ? 'Light' : 'Dark'} mode`, 'info');
 }
 
 // ============================
@@ -124,8 +125,11 @@ function setupEventListeners() {
     // Shorten button
     elements.shortenBtn.addEventListener('click', shortenURL);
     
+    // Reset button
+    elements.resetBtn.addEventListener('click', resetAll);
+    
     // Validate button
-    elements.validateBtn.addEventListener('click', validateURL);
+    elements.validateBtn.addEventListener('click', validateInput);
     
     // Download buttons
     elements.downloadPNG.addEventListener('click', () => downloadQRCode('png'));
@@ -136,61 +140,199 @@ function setupEventListeners() {
     elements.useShortUrlBtn.addEventListener('click', useShortenedURL);
     
     // Color pickers
-    elements.qrColor.addEventListener('input', () => {
-        elements.qrColorText.value = elements.qrColor.value;
-        if (elements.urlInput.value.trim()) generateQRCode();
-    });
+    elements.qrColor.addEventListener('input', updateColorDisplays);
+    elements.bgColor.addEventListener('input', updateColorDisplays);
     
-    elements.bgColor.addEventListener('input', () => {
-        elements.bgColorText.value = elements.bgColor.value;
-        if (elements.urlInput.value.trim()) generateQRCode();
-    });
-    
-    // Color text inputs
-    elements.qrColorText.addEventListener('change', () => {
-        const color = validateColor(elements.qrColorText.value);
-        if (color) {
-            elements.qrColor.value = color;
-            elements.qrColorText.value = color;
-            if (elements.urlInput.value.trim()) generateQRCode();
-        }
-    });
-    
-    elements.bgColorText.addEventListener('change', () => {
-        const color = validateColor(elements.bgColorText.value);
-        if (color) {
-            elements.bgColor.value = color;
-            elements.bgColorText.value = color;
-            if (elements.urlInput.value.trim()) generateQRCode();
-        }
-    });
-    
-    // Sliders
-    elements.qrSize.addEventListener('input', () => {
-        elements.sizeValue.textContent = elements.qrSize.value;
-        elements.previewSize.textContent = `${elements.qrSize.value}×${elements.qrSize.value}px`;
-        if (elements.urlInput.value.trim()) generateQRCode();
-    });
-    
-    elements.qrMargin.addEventListener('input', () => {
-        elements.marginValue.textContent = elements.qrMargin.value;
-        if (elements.urlInput.value.trim()) generateQRCode();
+    // Error correction buttons
+    elements.correctionBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            // Remove active class from all
+            elements.correctionBtns.forEach(b => b.classList.remove('active'));
+            // Add active to clicked
+            e.currentTarget.classList.add('active');
+            state.currentErrorLevel = e.currentTarget.getAttribute('data-level');
+            generateQRCode();
+        });
     });
     
     // Enter key to generate
     elements.urlInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') generateQRCode();
     });
+    
+    // Auto-generate on color change
+    elements.qrColor.addEventListener('change', () => {
+        if (elements.urlInput.value.trim()) generateQRCode();
+    });
+    
+    elements.bgColor.addEventListener('change', () => {
+        if (elements.urlInput.value.trim()) generateQRCode();
+    });
 }
 
-function updateSliderValues() {
-    elements.sizeValue.textContent = elements.qrSize.value;
-    elements.marginValue.textContent = elements.qrMargin.value;
-    elements.previewSize.textContent = `${elements.qrSize.value}×${elements.qrSize.value}px`;
+function updateColorDisplays() {
+    elements.qrColorDisplay.textContent = elements.qrColor.value.toUpperCase();
+    elements.bgColorDisplay.textContent = elements.bgColor.value.toUpperCase();
 }
 
 // ============================
-// QR CODE GENERATION - SIMPLE VERSION
+// HELPER FUNCTIONS - ADD MISSING ONES
+// ============================
+
+function showNotification(message, type = 'info') {
+    // Create notification element if it doesn't exist
+    let notification = document.querySelector('.notification');
+    if (!notification) {
+        notification = document.createElement('div');
+        notification.className = 'notification';
+        document.body.appendChild(notification);
+        
+        // Add styles for notification
+        const style = document.createElement('style');
+        style.textContent = `
+            .notification {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 15px 25px;
+                border-radius: 12px;
+                color: white;
+                font-weight: 500;
+                z-index: 1000;
+                transform: translateX(150%);
+                transition: transform 0.3s ease;
+                max-width: 300px;
+                font-family: 'Inter', sans-serif;
+            }
+            .notification.show {
+                transform: translateX(0);
+            }
+            .notification.success {
+                background: #10b981;
+                border-left: 4px solid #0da271;
+            }
+            .notification.error {
+                background: #ef4444;
+                border-left: 4px solid #dc2626;
+            }
+            .notification.info {
+                background: #3b82f6;
+                border-left: 4px solid #2563eb;
+            }
+            .notification.warning {
+                background: #f59e0b;
+                border-left: 4px solid #d97706;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    // Set notification content and type
+    notification.textContent = message;
+    notification.className = `notification ${type}`;
+    
+    // Show notification
+    setTimeout(() => notification.classList.add('show'), 10);
+    
+    // Hide after 3 seconds
+    setTimeout(() => {
+        notification.classList.remove('show');
+    }, 3000);
+}
+
+function setLoading(isLoading) {
+    state.isLoading = isLoading;
+    elements.generateBtn.disabled = isLoading;
+    
+    // Update button text
+    const icon = elements.generateBtn.querySelector('i');
+    const text = elements.generateBtn.querySelector('span:not(.loading)');
+    
+    if (isLoading) {
+        // Show loading state
+        elements.generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+    } else {
+        // Reset to normal state
+        elements.generateBtn.innerHTML = '<i class="fas fa-bolt"></i> Generate QR Code<span class="loading">⌛</span>';
+    }
+}
+
+function validateInput() {
+    const url = elements.urlInput.value.trim();
+    if (!url) {
+        showNotification('Please enter a URL', 'error');
+        return false;
+    }
+    
+    // Basic URL validation
+    let processedUrl = url;
+    if (!/^https?:\/\//i.test(url)) {
+        processedUrl = 'https://' + url;
+        elements.urlInput.value = processedUrl;
+        showNotification('Added https:// to URL', 'info');
+    }
+    
+    // Check if URL looks valid
+    try {
+        new URL(processedUrl);
+        showNotification('URL is valid!', 'success');
+        return true;
+    } catch (e) {
+        showNotification('Please enter a valid URL', 'error');
+        return false;
+    }
+}
+
+function resetAll() {
+    // Reset URL input
+    elements.urlInput.value = 'https://github.com';
+    
+    // Reset colors
+    elements.qrColor.value = '#000000';
+    elements.bgColor.value = '#ffffff';
+    updateColorDisplays();
+    
+    // Reset error correction to default (Q)
+    elements.correctionBtns.forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.getAttribute('data-level') === 'Q') {
+            btn.classList.add('active');
+        }
+    });
+    state.currentErrorLevel = 'Q';
+    
+    // Clear short URL
+    state.shortUrl = '';
+    elements.shortResult.classList.remove('show');
+    
+    // Disable download buttons
+    elements.downloadPNG.disabled = true;
+    elements.downloadSVG.disabled = true;
+    
+    // Clear QR code preview
+    if (state.qrInstance) {
+        state.qrInstance.clear();
+    }
+    elements.qrcodeDiv.innerHTML = `
+        <div class="placeholder">
+            <i class="fas fa-qrcode"></i>
+            <p>QR Code Preview</p>
+            <small>Enter URL and click Generate</small>
+        </div>
+    `;
+    elements.qrcodeDiv.classList.remove('has-qr');
+    
+    // Reset preview URL
+    elements.previewUrl.textContent = 'https://github.com';
+    
+    // Generate new QR code
+    generateQRCode();
+    
+    showNotification('All settings have been reset', 'info');
+}
+
+// ============================
+// QR CODE GENERATION - FIXED
 // ============================
 
 function generateQRCode() {
@@ -204,7 +346,7 @@ function generateQRCode() {
         return;
     }
     
-    // Process URL - ensure it has http/https
+    // Process URL
     let processedUrl = url;
     if (!/^https?:\/\//i.test(url)) {
         processedUrl = 'https://' + url;
@@ -216,145 +358,80 @@ function generateQRCode() {
         setLoading(true);
         
         // Clear previous QR code
-        elements.qrcodeDiv.innerHTML = '';
+        if (state.qrInstance) {
+            state.qrInstance.clear();
+        }
         
-        // Show loading in preview
-        elements.qrcodeDiv.innerHTML = `
-            <div class="placeholder">
-                <i class="fas fa-spinner fa-spin"></i>
-                <p>Generating QR Code...</p>
-            </div>
-        `;
+        // Clear the div
+        elements.qrcodeDiv.innerHTML = '';
         
         // Update preview info
         elements.previewUrl.textContent = processedUrl;
         
-        // Get settings
-        const size = parseInt(elements.qrSize.value);
-        const margin = parseInt(elements.qrMargin.value);
+        // Fixed size for QR code
+        const fixedSize = 400;
         
         console.log('Generating QR with:', { 
-            size, 
-            margin, 
+            size: fixedSize,
             url: processedUrl,
             dark: elements.qrColor.value,
-            light: elements.bgColor.value
+            light: elements.bgColor.value,
+            errorLevel: state.currentErrorLevel
         });
         
-        // Create canvas element
-        const canvas = document.createElement('canvas');
-        canvas.id = 'qrCanvas';
-        canvas.width = size;
-        canvas.height = size;
+        // Check if QRCode library is available
+        if (typeof QRCode === 'undefined') {
+            throw new Error('QR Code library not loaded. Please check your internet connection.');
+        }
         
-        // Draw QR code using our simple generator
-        drawSimpleQRCode(canvas, processedUrl, size, margin, elements.qrColor.value, elements.bgColor.value);
-        
-        // Add canvas to preview
-        elements.qrcodeDiv.innerHTML = '';
-        elements.qrcodeDiv.appendChild(canvas);
+        // Generate QR code
+        state.qrInstance = new QRCode(elements.qrcodeDiv, {
+            text: processedUrl,
+            width: fixedSize,
+            height: fixedSize,
+            colorDark: elements.qrColor.value,
+            colorLight: elements.bgColor.value,
+            correctLevel: QRCode.CorrectLevel[state.currentErrorLevel]
+        });
         
         // Store reference
         state.qrCode = {
             url: processedUrl,
-            canvas: canvas,
-            size: size,
-            margin: margin
+            size: fixedSize
         };
         
-        // Enable download buttons
-        elements.downloadPNG.disabled = false;
-        elements.downloadSVG.disabled = false;
+        // Mark the display as having QR
+        elements.qrcodeDiv.classList.add('has-qr');
         
-        // Update count
-        state.generatedCount++;
-        
-        // Show success
-        showNotification('QR Code generated successfully!', 'success');
+        // Wait for QR to render
+        setTimeout(() => {
+            // Enable download buttons
+            elements.downloadPNG.disabled = false;
+            elements.downloadSVG.disabled = false;
+            
+            // Update stats
+            state.generatedCount++;
+            
+            // Show success
+            showNotification('QR Code generated successfully!', 'success');
+            
+            setLoading(false);
+        }, 300);
         
     } catch (error) {
         console.error('Error generating QR code:', error);
-        showNotification('Failed to generate QR code. Please check your URL and try again.', 'error');
+        showNotification('Failed to generate QR code. Please check your URL.', 'error');
         
         // Show error in preview
         elements.qrcodeDiv.innerHTML = `
             <div class="placeholder">
                 <i class="fas fa-exclamation-triangle"></i>
-                <p>QR Code Generated</p>
-                <small>Custom pattern for: ${url.substring(0, 30)}</small>
+                <p>Generation Error</p>
+                <small>${error.message}</small>
             </div>
         `;
-    } finally {
         setLoading(false);
     }
-}
-
-// Simple QR Code Generator (basic pattern for demonstration)
-function drawSimpleQRCode(canvas, text, size, margin, darkColor, lightColor) {
-    const ctx = canvas.getContext('2d');
-    
-    // Fill background
-    ctx.fillStyle = lightColor;
-    ctx.fillRect(0, 0, size, size);
-    
-    // Draw QR pattern
-    ctx.fillStyle = darkColor;
-    
-    // Draw position markers (corners)
-    const markerSize = size * 0.2;
-    
-    // Top-left marker
-    ctx.fillRect(margin, margin, markerSize, markerSize);
-    ctx.fillStyle = lightColor;
-    ctx.fillRect(margin + 8, margin + 8, markerSize - 16, markerSize - 16);
-    ctx.fillStyle = darkColor;
-    ctx.fillRect(margin + 16, margin + 16, markerSize - 32, markerSize - 32);
-    
-    // Top-right marker
-    ctx.fillRect(size - margin - markerSize, margin, markerSize, markerSize);
-    ctx.fillStyle = lightColor;
-    ctx.fillRect(size - margin - markerSize + 8, margin + 8, markerSize - 16, markerSize - 16);
-    ctx.fillStyle = darkColor;
-    ctx.fillRect(size - margin - markerSize + 16, margin + 16, markerSize - 32, markerSize - 32);
-    
-    // Bottom-left marker
-    ctx.fillRect(margin, size - margin - markerSize, markerSize, markerSize);
-    ctx.fillStyle = lightColor;
-    ctx.fillRect(margin + 8, size - margin - markerSize + 8, markerSize - 16, markerSize - 16);
-    ctx.fillStyle = darkColor;
-    ctx.fillRect(margin + 16, size - margin - markerSize + 16, markerSize - 32, markerSize - 32);
-    
-    // Draw data pattern (simple grid)
-    ctx.fillStyle = darkColor;
-    const cellSize = size / 20;
-    
-    // Create a pattern based on the URL
-    for (let i = 0; i < 20; i++) {
-        for (let j = 0; j < 20; j++) {
-            // Skip position marker areas
-            if ((i < 5 && j < 5) || 
-                (i < 5 && j > 14) || 
-                (i > 14 && j < 5)) {
-                continue;
-            }
-            
-            // Create pattern based on URL characters
-            const charIndex = (i * 20 + j) % text.length;
-            const charCode = text.charCodeAt(charIndex);
-            
-            if (charCode % 2 === 0) {
-                const x = margin + i * cellSize;
-                const y = margin + j * cellSize;
-                ctx.fillRect(x, y, cellSize - 2, cellSize - 2);
-            }
-        }
-    }
-    
-    // Draw URL text at bottom
-    ctx.fillStyle = darkColor;
-    ctx.font = 'bold 14px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('QR Code', size / 2, size - 10);
 }
 
 // ============================
@@ -379,19 +456,29 @@ async function shortenURL() {
     
     try {
         // Set loading state
+        const originalText = elements.shortenBtn.innerHTML;
         elements.shortenBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Shortening...';
         elements.shortenBtn.disabled = true;
         
-        // Try multiple shortening services
-        const shortened = await tryShorteningServices(processedUrl);
+        // Use TinyURL API
+        const response = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(processedUrl)}`, {
+            headers: {
+                'Accept': 'text/plain'
+            }
+        });
         
-        if (shortened) {
-            state.shortUrl = shortened;
-            elements.shortUrlText.textContent = shortened;
-            elements.shortResult.classList.add('show');
-            showNotification('URL shortened successfully!', 'success');
+        if (response.ok) {
+            const shortened = await response.text();
+            if (shortened && !shortened.includes('Error') && shortened.startsWith('http')) {
+                state.shortUrl = shortened;
+                elements.shortUrlText.textContent = shortened;
+                elements.shortResult.classList.add('show');
+                showNotification('URL shortened successfully!', 'success');
+            } else {
+                throw new Error('Shortening service returned an error');
+            }
         } else {
-            throw new Error('All services failed');
+            throw new Error(`Network error: ${response.status}`);
         }
         
     } catch (error) {
@@ -404,45 +491,11 @@ async function shortenURL() {
     }
 }
 
-async function tryShorteningServices(url) {
-    // Try multiple services
-    const services = [
-        async () => {
-            try {
-                const response = await fetch(`https://is.gd/create.php?format=simple&url=${encodeURIComponent(url)}`);
-                if (response.ok) {
-                    const text = await response.text();
-                    if (text && !text.includes('Error')) return text;
-                }
-            } catch (e) {}
-            return null;
-        },
-        async () => {
-            try {
-                // Create a mock short URL if services fail
-                const shortId = Math.random().toString(36).substring(2, 8);
-                return `https://qr.st/${shortId}`;
-            } catch (e) {}
-            return null;
-        }
-    ];
-    
-    // Try each service
-    for (const service of services) {
-        try {
-            const result = await service();
-            if (result) return result;
-        } catch (e) {}
-    }
-    
-    return null;
-}
-
 function copyShortURL() {
     if (state.shortUrl) {
         navigator.clipboard.writeText(state.shortUrl)
             .then(() => {
-                showNotification('Copied to clipboard!', 'success');
+                showNotification('Short URL copied to clipboard!', 'success');
             })
             .catch(() => {
                 // Fallback for older browsers
@@ -452,10 +505,10 @@ function copyShortURL() {
                 textArea.select();
                 document.execCommand('copy');
                 document.body.removeChild(textArea);
-                showNotification('Copied!', 'success');
+                showNotification('Short URL copied!', 'success');
             });
     } else {
-        showNotification('No URL to copy', 'error');
+        showNotification('No shortened URL to copy', 'error');
     }
 }
 
@@ -474,17 +527,28 @@ function useShortenedURL() {
 // ============================
 
 function downloadQRCode(format) {
-    if (!state.qrCode || !state.qrCode.canvas) {
+    if (!state.qrCode || !elements.qrcodeDiv.querySelector('canvas')) {
         showNotification('Please generate a QR code first', 'error');
         return;
     }
     
     try {
+        const canvas = elements.qrcodeDiv.querySelector('canvas');
+        
+        if (!canvas) {
+            throw new Error('No QR code canvas found');
+        }
+        
+        let filename, mimeType;
+        
         if (format === 'png') {
-            // PNG download
+            filename = `qr-code-${Date.now()}.png`;
+            mimeType = 'image/png';
+            
+            // Create download link
             const link = document.createElement('a');
-            link.href = state.qrCode.canvas.toDataURL('image/png');
-            link.download = `qr-code-${Date.now()}.png`;
+            link.href = canvas.toDataURL(mimeType);
+            link.download = filename;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -492,26 +556,11 @@ function downloadQRCode(format) {
             showNotification('PNG downloaded successfully!', 'success');
             
         } else if (format === 'svg') {
-            // Create SVG
-            const size = state.qrCode.size;
-            const dark = elements.qrColor.value;
-            const light = elements.bgColor.value;
-            
-            const svg = `<svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
-                <rect width="100%" height="100%" fill="${light}"/>
-                <rect x="20" y="20" width="${size*0.2}" height="${size*0.2}" fill="${dark}"/>
-                <rect x="${size-20-size*0.2}" y="20" width="${size*0.2}" height="${size*0.2}" fill="${dark}"/>
-                <rect x="20" y="${size-20-size*0.2}" width="${size*0.2}" height="${size*0.2}" fill="${dark}"/>
-                <text x="50%" y="50%" text-anchor="middle" fill="${dark}" font-family="Arial" font-size="16">
-                    QR Code
-                </text>
-                <text x="50%" y="85%" text-anchor="middle" fill="${dark}" font-family="Arial" font-size="12">
-                    ${state.qrCode.url.substring(0, 20)}
-                </text>
-            </svg>`;
-            
-            const blob = new Blob([svg], { type: 'image/svg+xml' });
+            // Create a simple SVG with the QR code image embedded
+            const svgContent = createSVGWithQR(canvas);
+            const blob = new Blob([svgContent], { type: 'image/svg+xml' });
             const url = URL.createObjectURL(blob);
+            
             const link = document.createElement('a');
             link.href = url;
             link.download = `qr-code-${Date.now()}.svg`;
@@ -531,120 +580,66 @@ function downloadQRCode(format) {
     }
 }
 
-// ============================
-// HELPER FUNCTIONS
-// ============================
-
-function setLoading(isLoading) {
-    state.isLoading = isLoading;
-    elements.generateBtn.disabled = isLoading;
-    elements.loading.style.display = isLoading ? 'inline-block' : 'none';
-}
-
-function validateURL() {
-    const url = elements.urlInput.value.trim();
-    if (!url) {
-        showNotification('Please enter a URL', 'error');
-        return;
-    }
+function createSVGWithQR(canvas) {
+    const size = state.qrCode.size;
+    const dark = elements.qrColor.value;
+    const light = elements.bgColor.value;
+    const url = state.qrCode.url;
     
-    // Simple URL validation
-    try {
-        new URL(url.startsWith('http') ? url : `https://${url}`);
-        showNotification('URL is valid!', 'success');
-        return true;
-    } catch {
-        showNotification('URL might be invalid. Please check format.', 'warning');
-        return false;
-    }
-}
-
-function validateColor(color) {
-    // Check if it's a valid hex color
-    const hexRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
-    if (hexRegex.test(color)) {
-        return color;
-    }
+    // Get the QR code as data URL
+    const qrDataURL = canvas.toDataURL('image/png');
     
-    // Try to convert other formats
-    try {
-        const ctx = document.createElement('canvas').getContext('2d');
-        ctx.fillStyle = color;
-        return ctx.fillStyle === '#000000' && !color.includes('#') ? null : ctx.fillStyle;
-    } catch {
-        return null;
-    }
-}
-
-function showNotification(message, type = 'info') {
-    // Remove existing notifications
-    const existing = document.querySelectorAll('.notification');
-    existing.forEach(notif => notif.remove());
-    
-    // Create notification element
-    const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
-    
-    // Get icon based on type
-    let icon = 'info-circle';
-    if (type === 'success') icon = 'check-circle';
-    if (type === 'error') icon = 'exclamation-circle';
-    if (type === 'warning') icon = 'exclamation-triangle';
-    
-    notification.innerHTML = `
-        <i class="fas fa-${icon}"></i>
-        <span>${message}</span>
-    `;
-    
-    // Style the notification
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        padding: 15px 20px;
-        background: ${type === 'success' ? '#10b981' : 
-                     type === 'error' ? '#ef4444' : 
-                     type === 'warning' ? '#f59e0b' : '#3b82f6'};
-        color: white;
-        border-radius: 10px;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        z-index: 1000;
-        animation: slideIn 0.3s ease;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        max-width: 400px;
-    `;
-    
-    // Add to page
-    document.body.appendChild(notification);
-    
-    // Remove after 3 seconds
-    setTimeout(() => {
-        notification.style.opacity = '0';
-        notification.style.transform = 'translateX(100%)';
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.parentNode.removeChild(notification);
+    // Create SVG with embedded QR code
+    const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <style>
+            .title { 
+                font-family: 'Inter', sans-serif; 
+                font-size: 14px; 
+                font-weight: 600;
             }
-        }, 300);
-    }, 3000);
+            .url {
+                font-family: 'Inter', sans-serif;
+                font-size: 10px;
+                opacity: 0.8;
+            }
+        </style>
+    </defs>
+    
+    <rect width="100%" height="100%" fill="${light}"/>
+    
+    <!-- QR Code -->
+    <image href="${qrDataURL}" width="85%" height="85%" x="7.5%" y="7.5%"/>
+    
+    <!-- Border -->
+    <rect width="100%" height="100%" fill="none" stroke="${dark}" stroke-width="2"/>
+    
+    <!-- Footer with URL -->
+    <rect y="92%" width="100%" height="8%" fill="${dark}" opacity="0.9"/>
+    <text x="50%" y="96%" text-anchor="middle" fill="${light}" class="url">
+        ${url.substring(0, 40)}${url.length > 40 ? '...' : ''}
+    </text>
+    
+    <!-- Created by text -->
+    <text x="50%" y="4%" text-anchor="middle" fill="${dark}" class="title">
+        QR Code
+    </text>
+</svg>`;
+    
+    return svg;
 }
 
-// Add notification animation
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideIn {
-        from {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
-    }
-`;
-document.head.appendChild(style);
+// ============================
+// INITIALIZE ERROR CORRECTION ACTIVE STATE
+// ============================
 
-console.log('Script loaded successfully!');
+// Make sure Q (High) is active by default
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(() => {
+        const defaultBtn = document.querySelector('.correction-btn[data-level="Q"]');
+        if (defaultBtn) {
+            defaultBtn.classList.add('active');
+        }
+    }, 50);
+});
