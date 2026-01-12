@@ -25,7 +25,7 @@ With real-time preview, URL shortening, and multiple export options, it's your a
 
 ## Live Link
 
-https://quickqr-tools.vercel.app/
+https://quickqr-tools.vercel.app/ 
 ---
 
 ## Features
