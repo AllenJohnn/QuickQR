@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Generator</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/davidshimjs-qrcodejs@0.0.2/qrcode.min.js"></script>
+</head>
+<body class="dark">
+    <button class="theme-btn" id="themeToggle">
+        <i class="fas fa-sun"></i>
+    </button>
+
+    <div class="app">
+        <div class="container">
+            <div class="header-section">
+                <h1>QR Code</h1>
+                <p>Generate QR codes instantly</p>
+            </div>
+
+            <div class="main-grid">
+                <!-- LEFT PANEL -->
+                <div class="control-panel">
+                    <div class="input-group">
+                        <input 
+                            type="text" 
+                            id="urlInput" 
+                            placeholder="Enter your URL"
+                            value="https://github.com/AllenJohnn"
+                            class="url-input"
+                        >
+                    </div>
+
+                    <button id="generateBtn" class="btn-generate">
+                        <span>Generate QR Code</span>
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+
+                    <div class="divider"></div>
+
+                    <div class="customize-section">
+                        <h3>Customize</h3>
+                        
+                        <div class="control-group">
+                            <label>Colors</label>
+                            <div class="color-grid">
+                                <div class="color-input">
+                                    <input type="color" id="qrColor" value="#000000">
+                                    <span id="qrColorDisplay">#000000</span>
+                                </div>
+                                <div class="color-input">
+                                    <input type="color" id="bgColor" value="#ffffff">
+                                    <span id="bgColorDisplay">#ffffff</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="control-group">
+                            <label>Error Correction</label>
+                            <div class="level-buttons">
+                                <button class="level-btn" data-level="L" title="7% data recovery">L</button>
+                                <button class="level-btn" data-level="M" title="15% data recovery">M</button>
+                                <button class="level-btn active" data-level="Q" title="25% data recovery">Q</button>
+                                <button class="level-btn" data-level="H" title="30% data recovery">H</button>
+                            </div>
+                        </div>
+
+                        <button id="shortenBtn" class="btn-secondary">
+                            <i class="fas fa-link"></i> Shorten URL
+                        </button>
+                    </div>
+                </div>
+
+                <!-- RIGHT PANEL -->
+                <div class="preview-panel">
+                    <div class="qr-wrapper">
+                        <div id="qrcode" class="qr-display">
+                            <div class="qr-placeholder">
+                                <i class="fas fa-qrcode"></i>
+                                <p>Enter URL to generate</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="url-info">
+                        <p class="label">URL</p>
+                        <p id="previewUrl" class="url-text">https://github.com/AllenJohnn</p>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button id="downloadPNG" class="btn-download" disabled>
+                            <i class="fas fa-download"></i> PNG
+                        </button>
+                        <button id="downloadSVG" class="btn-download" disabled>
+                            <i class="fas fa-download"></i> SVG
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal" id="shortUrlModal">
+        <div class="modal-content">
+            <button class="modal-close" id="closeModal">
+                <i class="fas fa-times"></i>
+            </button>
+            <h2>Shortened URL</h2>
+            <input type="text" id="shortUrlText" readonly class="url-input">
+            <div class="modal-actions">
+                <button class="btn-primary" id="copyUrlBtn">
+                    <i class="fas fa-copy"></i> Copy
+                </button>
+                <button class="btn-secondary" id="useUrlBtn">
+                    <i class="fas fa-check"></i> Use
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <p class="footer-text"><span id="currentYear"></span> • QR Code Generator</p>
+            
+            <div class="footer-links">
+                <a href="https://github.com/AllenJohnn/QuickQR" target="_blank" rel="noopener" title="GitHub Repository">
+                    <i class="fab fa-github"></i>
+                </a>
+                <a href="https://allenjohn-portfolio.vercel.app/" target="_blank" rel="noopener" title="Portfolio">
+                    <i class="fas fa-globe"></i>
+                </a>
+                <a href="https://www.linkedin.com/in/allenjohnjoy/" target="_blank" rel="noopener" title="LinkedIn">
+                    <i class="fab fa-linkedin"></i>
+                </a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
